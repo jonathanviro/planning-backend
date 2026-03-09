@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Initiative {
+  id                String @id
+  workName          String
+  stream            String
+  workType          String
+  itBusinessPartner String
+  priority          String
+  classification    String
+  
+  // Guardamos el objeto de horas { q1: 0, ... } como JSON
+  hours             Json
+  
+  // Guardamos los trimestres asignados ["q1", "q2"] como JSON
+  assignedQuarters  Json   @default("[]")
+}

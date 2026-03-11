@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 import { createId } from '@paralleldrive/cuid2';
 
 // Datos iniciales copiados de tu frontend (simplificados para el ejemplo)
@@ -134,5 +135,75 @@ export class AppService implements OnModuleInit {
     return {
       message: `${initiatives.length} iniciativas importadas correctamente`,
     };
+  }
+
+  async exportData() {
+    const initiatives = await this.prisma.initiative.findMany({
+      orderBy: { id: 'asc' },
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Planning');
+
+    // 1. Definir columnas y encabezados (incluye anchos)
+    worksheet.columns = [
+      { header: 'Stream', key: 'stream', width: 15 },
+      { header: 'Work Type', key: 'workType', width: 20 },
+      { header: 'Work Name', key: 'workName', width: 30 },
+      { header: 'Users', key: 'users', width: 20 },
+      { header: 'Priority', key: 'priority', width: 15 },
+      { header: 'Classification', key: 'classification', width: 15 },
+      { header: 'Q1', key: 'q1', width: 8 },
+      { header: 'Q2', key: 'q2', width: 8 },
+      { header: 'Q3', key: 'q3', width: 8 },
+      { header: 'Q4', key: 'q4', width: 8 },
+      { header: 'Total', key: 'total', width: 10 },
+    ];
+
+    // 2. Estilizar encabezado (Fila 1)
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' }, // Gris claro
+    };
+    headerRow.eachCell((cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+
+    // 3. Agregar datos y bordes
+    initiatives.forEach((item) => {
+      const hours = item.hours as any;
+      const row = worksheet.addRow({
+        stream: item.stream,
+        workType: item.workType,
+        workName: item.workName,
+        users: item.itBusinessPartner,
+        priority: item.priority,
+        classification: item.classification,
+        q1: hours?.q1 ?? 0,
+        q2: hours?.q2 ?? 0,
+        q3: hours?.q3 ?? 0,
+        q4: hours?.q4 ?? 0,
+        total: hours?.total ?? 0,
+      });
+
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+    });
+
+    return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
   }
 }
